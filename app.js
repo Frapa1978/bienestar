@@ -625,13 +625,18 @@ const app = {
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                // Build formData with only filled fields
-                const formData = {
-                    date: document.getElementById('log-date').value,
-                    systolic: parseInt(document.getElementById('systolic').value),
-                    diastolic: parseInt(document.getElementById('diastolic').value)
-                };
-                // Add optional fields only if they have values
+                // Build formData with only filled fields; check minimal entries
+                const formData = { date: document.getElementById('log-date').value };
+                const sysVal = parseInt(document.getElementById('systolic').value);
+                const diaVal = parseInt(document.getElementById('diastolic').value);
+                if (!isNaN(sysVal)) formData.systolic = sysVal;
+                if (!isNaN(diaVal)) formData.diastolic = diaVal;
+                // ensure at least one of systolic/diastolic is present
+                if (isNaN(sysVal) && isNaN(diaVal)) {
+                    alert('Por favor ingresa al menos la presión sistólica o diastólica');
+                    return;
+                }
+                // Add optional meta fields
                 const pulseVal = parseInt(document.getElementById('pulse').value);
                 if (!isNaN(pulseVal)) formData.pulse = pulseVal;
                 
