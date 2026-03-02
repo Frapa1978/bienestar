@@ -2,7 +2,7 @@
   "name": "Bienestar | Control de Salud",
   "short_name": "Bienestar",
   "description": "Tu asistente personal para el control de presión arterial, glicemia y peso.",
-  "start_url": "index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",

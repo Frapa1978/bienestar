@@ -1,5 +1,6 @@
-const CACHE_NAME = 'bienestar-v1';
+const CACHE_NAME = 'bienestar-v2';
 const ASSETS = [
+    './',
     'index.html',
     'style.css',
     'app.js',
