@@ -625,26 +625,24 @@ const app = {
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                // Build formData with only filled fields; check minimal entries
+                // Build formData with only filled fields; require at least one measurement
                 const formData = { date: document.getElementById('log-date').value };
                 const sysVal = parseInt(document.getElementById('systolic').value);
                 const diaVal = parseInt(document.getElementById('diastolic').value);
                 if (!isNaN(sysVal)) formData.systolic = sysVal;
                 if (!isNaN(diaVal)) formData.diastolic = diaVal;
-                // ensure at least one of systolic/diastolic is present
-                if (isNaN(sysVal) && isNaN(diaVal)) {
-                    alert('Por favor ingresa al menos la presión sistólica o diastólica');
-                    return;
-                }
-                // Add optional meta fields
+                // collect other optional values
                 const pulseVal = parseInt(document.getElementById('pulse').value);
                 if (!isNaN(pulseVal)) formData.pulse = pulseVal;
-                
                 const glucoseVal = parseInt(document.getElementById('glucose').value);
                 if (!isNaN(glucoseVal)) formData.glucose = glucoseVal;
-                
                 const weightVal = parseFloat(document.getElementById('weight').value);
                 if (!isNaN(weightVal)) formData.weight = weightVal;
+                // ensure at least one of the numeric fields is present
+                if (isNaN(sysVal) && isNaN(diaVal) && isNaN(pulseVal) && isNaN(glucoseVal) && isNaN(weightVal)) {
+                    alert('Por favor ingresa al menos un valor (presión, pulso, glicemia o peso)');
+                    return;
+                }
                 
                 this.addLog(formData);
                 this.hideModal('log-modal');
