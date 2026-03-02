@@ -5,6 +5,10 @@
 
 console.log('app.js loaded');
 
+// default supabase configuration (replace with your own project values)
+const DEFAULT_SUPABASE_URL = 'https://qcbrxhuktglawmggdyge.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_Uq-ovU5whLrT4ll0o1C1JA_XRpyPX-4';
+
 const app = {
     data: {
         logs: [],
@@ -14,8 +18,8 @@ const app = {
             unitWeight: 'kg',
             userName: '',
             targetWeight: 90,
-            supabaseUrl: '',
-            supabaseKey: ''
+            supabaseUrl: 'https://qcbrxhuktglawmggdyge.supabase.co',
+            supabaseKey: 'sb_publishable_Uq-ovU5whLrT4ll0o1C1JA_XRpyPX-4'
         },
         user: null,
         syncing: false,
@@ -62,6 +66,10 @@ const app = {
             const parsed = JSON.parse(savedSettings);
             this.data.settings = { ...this.data.settings, ...parsed };
         }
+        // ensure we always have supabase credentials set
+        if (!this.data.settings.supabaseUrl) this.data.settings.supabaseUrl = DEFAULT_SUPABASE_URL;
+        if (!this.data.settings.supabaseKey) this.data.settings.supabaseKey = DEFAULT_SUPABASE_KEY;
+        this.saveSettings();
     },
 
     initSupabase() {
@@ -506,11 +514,19 @@ const app = {
         const weightEl = document.getElementById('target-weight');
         const urlEl = document.getElementById('supabase-url');
         const keyEl = document.getElementById('supabase-key');
+        const saveConfigBtn = document.getElementById('save-supabase-config');
 
         if (nameEl) nameEl.value = this.data.settings.userName || '';
         if (weightEl) weightEl.value = this.data.settings.targetWeight || 90;
-        if (urlEl) urlEl.value = this.data.settings.supabaseUrl || '';
-        if (keyEl) keyEl.value = this.data.settings.supabaseKey || '';
+        if (urlEl) {
+            urlEl.value = this.data.settings.supabaseUrl || '';
+            urlEl.disabled = true;
+        }
+        if (keyEl) {
+            keyEl.value = this.data.settings.supabaseKey || '';
+            keyEl.disabled = true;
+        }
+        if (saveConfigBtn) saveConfigBtn.style.display = 'none';
     },
 
     initCharts() {
