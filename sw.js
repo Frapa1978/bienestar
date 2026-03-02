@@ -9,8 +9,8 @@ const ASSETS = [
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap',
     'https://cdn.jsdelivr.net/npm/chart.js',
     'https://unpkg.com/lucide@latest',
-    'https://img.icons8.com/fluency/192/medical-cross.png',
-    'https://img.icons8.com/fluency/512/medical-cross.png'
+    './icon-192.png',
+    './icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
