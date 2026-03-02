@@ -379,6 +379,78 @@ h3,
     color: var(--primary);
 }
 
+/* Medication List Styles */
+.med-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.med-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.03);
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+}
+
+.dark-mode .med-item {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.med-info {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+/* Print Styles for Doctor Report */
+@media print {
+
+    .nav-bar,
+    .action-buttons,
+    .main-header,
+    .settings-group,
+    .icon-btn,
+    .chart-container,
+    .modal {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+        padding: 0 !important;
+    }
+
+    .view {
+        display: none !important;
+    }
+
+    #history.view {
+        display: block !important;
+    }
+
+    .glass {
+        background: none !important;
+        backdrop-filter: none !important;
+        box-shadow: none !important;
+        border: 1px solid #eee !important;
+        border-radius: 0 !important;
+    }
+
+    .history-card {
+        page-break-inside: avoid;
+        margin-bottom: 5px !important;
+        padding: 10px !important;
+    }
+
+    h2::before {
+        content: "Reporte de Salud - " attr(data-user);
+    }
+}
+
 .nav-item i {
     width: 24px;
     height: 24px;

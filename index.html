@@ -9,8 +9,13 @@
     <meta name="description" content="Tu asistente personal para el control de presión, glicemia y peso.">
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ffffff">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Bienestar">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/hearts.png">
     <!-- Google Fonts: Inter & Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -70,6 +75,22 @@
                 </div>
             </div>
 
+            <div class="averages-container glass"
+                style="margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1rem;">
+                <div class="avg-box" style="text-align: center; border-right: 1px solid rgba(0,0,0,0.05);">
+                    <h4 style="font-size: 0.75rem; opacity: 0.7; margin-bottom: 0.2rem; text-transform: uppercase;">
+                        Últimos 7 días</h4>
+                    <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);" id="avg-7-bp">--/--</div>
+                    <div style="font-size: 0.8rem; opacity: 0.8;" id="avg-7-glucose">-- mg/dL</div>
+                </div>
+                <div class="avg-box" style="text-align: center;">
+                    <h4 style="font-size: 0.75rem; opacity: 0.7; margin-bottom: 0.2rem; text-transform: uppercase;">
+                        Últimos 30 días</h4>
+                    <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);" id="avg-30-bp">--/--</div>
+                    <div style="font-size: 0.8rem; opacity: 0.8;" id="avg-30-glucose">-- mg/dL</div>
+                </div>
+            </div>
+
             <div class="chart-container glass">
                 <div class="chart-header">
                     <h3>Tendencias</h3>
@@ -109,6 +130,11 @@
             <div id="full-history-list" class="full-list">
                 <!-- All history items will be injected here -->
             </div>
+            <div class="action-buttons" style="margin-top: 1.5rem;">
+                <button class="btn-secondary" onclick="window.print()" style="width: 100%;">
+                    <i data-lucide="printer"></i> Generar Reporte para Médico
+                </button>
+            </div>
         </section>
 
         <!-- Settings View -->
@@ -126,6 +152,21 @@
                     <div class="form-group">
                         <label for="target-weight">Meta de Peso (kg)</label>
                         <input type="number" step="0.1" id="target-weight" placeholder="90.5">
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <h3>Medicación Diaria</h3>
+                    <div id="med-list" class="med-list">
+                        <!-- Meds will be injected here -->
+                    </div>
+                    <div class="med-add-form" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <input type="text" id="new-med-name" placeholder="Ej: Losartán 50mg"
+                            style="flex: 1; font-size: 0.9rem;">
+                        <button class="icon-btn" onclick="app.addMedication()"
+                            style="background: var(--primary); color: white; border-radius: 8px;">
+                            <i data-lucide="plus"></i>
+                        </button>
                     </div>
                 </div>
 

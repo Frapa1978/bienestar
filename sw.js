@@ -5,7 +5,9 @@ const ASSETS = [
     'app.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap',
     'https://cdn.jsdelivr.net/npm/chart.js',
-    'https://unpkg.com/lucide@latest'
+    'https://unpkg.com/lucide@latest',
+    'https://img.icons8.com/fluency/192/hearts.png',
+    'https://img.icons8.com/fluency/512/hearts.png'
 ];
 
 self.addEventListener('install', (event) => {

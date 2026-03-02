@@ -8,6 +8,7 @@ console.log('app.js loaded');
 const app = {
     data: {
         logs: [],
+        medications: [],
         settings: {
             darkMode: false,
             unitWeight: 'kg',
@@ -31,6 +32,7 @@ const app = {
         this.renderDashboard();
         this.renderHistory();
         this.renderSettings();
+        this.renderMedications();
         this.initEventListeners();
         this.initCharts();
 
@@ -47,19 +49,17 @@ const app = {
         console.log('Loading local data...');
         // Load logs
         const savedLogs = localStorage.getItem('bienestar_logs');
-        if (savedLogs) {
-            this.data.logs = JSON.parse(savedLogs);
-            console.log('Logs loaded:', this.data.logs.length);
-        }
+        if (savedLogs) this.data.logs = JSON.parse(savedLogs);
+
+        // Load medications
+        const savedMeds = localStorage.getItem('bienestar_meds');
+        if (savedMeds) this.data.medications = JSON.parse(savedMeds);
 
         // Load settings and merge with defaults
         const savedSettings = localStorage.getItem('bienestar_settings');
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
             this.data.settings = { ...this.data.settings, ...parsed };
-            console.log('Settings loaded:', this.data.settings);
-        } else {
-            console.log('No saved settings found, using defaults');
         }
     },
 
@@ -67,25 +67,20 @@ const app = {
         const url = this.data.settings.supabaseUrl;
         const key = this.data.settings.supabaseKey;
 
-        console.log('Initializing Supabase with:', url ? (url.substring(0, 10) + '...') : 'no url');
-
         if (url && key) {
             try {
                 if (typeof supabase === 'undefined') {
-                    console.error('Supabase library not loaded!');
                     this.updateSyncIndicator('error');
                     return;
                 }
                 this.supabase = supabase.createClient(url, key);
                 this.checkSession();
-                console.log('Supabase client created successfully');
                 this.updateSyncIndicator('synced');
             } catch (error) {
                 console.error('Error creating Supabase client:', error);
                 this.updateSyncIndicator('error');
             }
         } else {
-            console.log('Missing credentials, sync disabled');
             this.updateSyncIndicator('offline');
         }
     },
@@ -97,7 +92,6 @@ const app = {
             this.handleAuthStateChange(session);
 
             this.supabase.auth.onAuthStateChange((_event, session) => {
-                console.log('Auth state changed:', _event);
                 this.handleAuthStateChange(session);
             });
         } catch (e) {
@@ -107,10 +101,10 @@ const app = {
 
     handleAuthStateChange(session) {
         this.data.user = session?.user || null;
-        console.log('User status:', this.data.user ? this.data.user.email : 'logged out');
         this.updateAuthUI();
         if (this.data.user) {
             this.pullFromRemote();
+            this.pullMedsFromRemote();
         }
     },
 
@@ -142,7 +136,6 @@ const app = {
 
     async handleAuth(e) {
         e.preventDefault();
-        console.log('Handling auth...');
         if (!this.supabase) return alert('Por favor, configura Supabase primero en Ajustes.');
 
         const email = document.getElementById('auth-email').value;
@@ -163,32 +156,22 @@ const app = {
             this.hideModal('auth-modal');
             if (msg) msg.textContent = '';
         } catch (error) {
-            console.error('Auth error:', error);
             if (msg) msg.textContent = error.message;
         }
     },
 
     async signOut() {
-        console.log('Signing out...');
         if (this.supabase) {
             await this.supabase.auth.signOut();
         }
     },
 
     saveSupabaseConfig() {
-        console.log('Button "Guardar Configuración" clicked');
         const urlInput = document.getElementById('supabase-url');
         const keyInput = document.getElementById('supabase-key');
 
-        if (!urlInput || !keyInput) {
-            console.error('Inputs not found in DOM!');
-            return;
-        }
-
         const url = urlInput.value.trim();
         const key = keyInput.value.trim();
-
-        console.log('Attempting to save:', url ? 'URL present' : 'URL empty');
 
         if (!url || !key) {
             alert('Por favor, ingresa tanto la URL como la Anon Key.');
@@ -199,8 +182,6 @@ const app = {
         this.data.settings.supabaseKey = key;
 
         this.saveSettings();
-        console.log('Settings saved to localStorage');
-
         this.initSupabase();
         alert('Configuración guardada correctamente.');
     },
@@ -225,7 +206,6 @@ const app = {
     async pullFromRemote() {
         if (!this.supabase || !this.data.user) return;
 
-        console.log('Pulling data from remote...');
         this.updateSyncIndicator('syncing');
         try {
             const { data, error } = await this.supabase
@@ -236,7 +216,6 @@ const app = {
             if (error) throw error;
 
             if (data) {
-                console.log('Data pulled:', data.length, 'records');
                 this.data.logs = data;
                 this.saveLogs();
                 this.renderDashboard();
@@ -253,7 +232,6 @@ const app = {
     async pushToRemote(logEntry) {
         if (!this.supabase || !this.data.user) return;
 
-        console.log('Pushing entry to remote:', logEntry.id);
         this.updateSyncIndicator('syncing');
         try {
             const { error } = await this.supabase
@@ -261,7 +239,6 @@ const app = {
                 .upsert({ ...logEntry, user_id: this.data.user.id });
 
             if (error) throw error;
-            console.log('Push successful');
             this.updateSyncIndicator('synced');
         } catch (error) {
             console.error('Push error:', error);
@@ -271,16 +248,120 @@ const app = {
 
     async deleteRemote(id) {
         if (!this.supabase || !this.data.user) return;
-        console.log('Deleting from remote:', id);
         try {
-            const { error } = await this.supabase
-                .from('logs')
-                .delete()
-                .eq('id', id);
-            if (error) throw error;
+            await this.supabase.from('logs').delete().eq('id', id);
         } catch (e) {
             console.error('Delete error:', e);
         }
+    },
+
+    /**
+     * Medications Management
+     */
+    async pullMedsFromRemote() {
+        if (!this.supabase || !this.data.user) return;
+        try {
+            const { data, error } = await this.supabase
+                .from('medications')
+                .select('*');
+            if (!error && data) {
+                this.data.medications = data;
+                this.saveMeds();
+                this.renderMedications();
+            }
+        } catch (e) {
+            console.error('Pull meds error:', e);
+        }
+    },
+
+    renderMedications() {
+        const medList = document.getElementById('med-list');
+        if (!medList) return;
+
+        if (this.data.medications.length === 0) {
+            medList.innerHTML = '<p style="font-size: 0.8rem; opacity: 0.5; text-align: center;">No hay medicinas registradas.</p>';
+            return;
+        }
+
+        medList.innerHTML = this.data.medications.map(med => `
+            <div class="med-item">
+                <span class="med-info">${med.name}</span>
+                <button class="icon-btn" onclick="app.removeMedication(${med.id})" style="color: var(--accent-red); padding: 5px;">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+    },
+
+    async addMedication() {
+        const input = document.getElementById('new-med-name');
+        const name = input.value.trim();
+        if (!name) return;
+
+        const newMed = {
+            id: Date.now(),
+            name: name
+        };
+
+        this.data.medications.push(newMed);
+        this.saveMeds();
+        this.renderMedications();
+        input.value = '';
+
+        if (this.supabase && this.data.user) {
+            await this.supabase.from('medications').upsert({ ...newMed, user_id: this.data.user.id });
+        }
+    },
+
+    async removeMedication(id) {
+        this.data.medications = this.data.medications.filter(m => m.id !== id);
+        this.saveMeds();
+        this.renderMedications();
+
+        if (this.supabase && this.data.user) {
+            await this.supabase.from('medications').delete().eq('id', id);
+        }
+    },
+
+    saveMeds() {
+        localStorage.setItem('bienestar_meds', JSON.stringify(this.data.medications));
+    },
+
+    /**
+     * Calculations & UI
+     */
+    calculateAverages() {
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+        const getAvg = (logs) => {
+            if (logs.length === 0) return { bp: '--/--', glucose: '--' };
+            const sys = Math.round(logs.reduce((sum, l) => sum + l.systolic, 0) / logs.length);
+            const dia = Math.round(logs.reduce((sum, l) => sum + l.diastolic, 0) / logs.length);
+            const glucoseLogs = logs.filter(l => l.glucose);
+            const glucose = glucoseLogs.length > 0
+                ? Math.round(glucoseLogs.reduce((sum, l) => sum + l.glucose, 0) / glucoseLogs.length)
+                : '--';
+            return { bp: `${sys}/${dia}`, glucose };
+        };
+
+        const logs7 = this.data.logs.filter(l => new Date(l.date) >= sevenDaysAgo);
+        const logs30 = this.data.logs.filter(l => new Date(l.date) >= thirtyDaysAgo);
+
+        const avg7 = getAvg(logs7);
+        const avg30 = getAvg(logs30);
+
+        const el7bp = document.getElementById('avg-7-bp');
+        const el7gl = document.getElementById('avg-7-glucose');
+        const el30bp = document.getElementById('avg-30-bp');
+        const el30gl = document.getElementById('avg-30-glucose');
+
+        if (el7bp) el7bp.textContent = avg7.bp;
+        if (el7gl) el7gl.textContent = `${avg7.glucose} mg/dL`;
+        if (el30bp) el30bp.textContent = avg30.bp;
+        if (el30gl) el30gl.textContent = `${avg30.glucose} mg/dL`;
     },
 
     applyTheme() {
@@ -291,10 +372,8 @@ const app = {
             document.body.classList.remove('dark-mode');
             document.body.classList.add('light-mode');
         }
-
         const darkToggle = document.getElementById('dark-mode-toggle');
         if (darkToggle) darkToggle.checked = this.data.settings.darkMode;
-
         const themeBtn = document.getElementById('theme-toggle');
         if (themeBtn) {
             themeBtn.innerHTML = this.data.settings.darkMode ? '<i data-lucide="moon"></i>' : '<i data-lucide="sun"></i>';
@@ -327,7 +406,6 @@ const app = {
         this.renderDashboard();
         this.renderHistory();
         this.updateChart();
-
         this.pushToRemote(entry);
     },
 
@@ -351,7 +429,6 @@ const app = {
 
     renderDashboard() {
         const lastLog = this.data.logs[0];
-
         const bpEl = document.getElementById('last-bp');
         const glucoseEl = document.getElementById('last-glucose');
         const weightEl = document.getElementById('last-weight');
@@ -359,6 +436,8 @@ const app = {
         if (bpEl) bpEl.textContent = lastLog ? `${lastLog.systolic}/${lastLog.diastolic}` : '--/--';
         if (glucoseEl) glucoseEl.textContent = lastLog && lastLog.glucose ? lastLog.glucose : '--';
         if (weightEl) weightEl.textContent = lastLog && lastLog.weight ? Number(lastLog.weight).toFixed(1) : '--.-';
+
+        this.calculateAverages();
 
         const listContainer = document.getElementById('recent-logs-list');
         if (listContainer) {
@@ -386,6 +465,10 @@ const app = {
     renderHistory() {
         const fullList = document.getElementById('full-history-list');
         if (!fullList) return;
+
+        // Add user name for print
+        const historyView = document.getElementById('history');
+        if (historyView) historyView.setAttribute('data-user', this.data.settings.userName || '');
 
         if (this.data.logs.length === 0) {
             fullList.innerHTML = '<div class="glass" style="padding: 2rem; text-align: center; opacity: 0.6;">No hay registros aún.</div>';
@@ -418,7 +501,6 @@ const app = {
     },
 
     renderSettings() {
-        console.log('Rendering settings fields...');
         const nameEl = document.getElementById('user-name');
         const weightEl = document.getElementById('target-weight');
         const urlEl = document.getElementById('supabase-url');
@@ -433,117 +515,61 @@ const app = {
     initCharts() {
         const canvas = document.getElementById('healthChart');
         if (!canvas) return;
-
         if (this.chart) this.chart.destroy();
-
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         const isDark = document.body.classList.contains('dark-mode');
         const textColor = isDark ? '#f1f5f9' : '#1e293b';
-
-        if (typeof Chart === 'undefined') {
-            console.warn('Chart.js not loaded yet');
-            return;
-        }
+        if (typeof Chart === 'undefined') return;
 
         this.chart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [] },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: { color: textColor, font: { family: 'Inter', size: 12 } }
-                    }
-                },
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: textColor, font: { family: 'Inter', size: 12 } } } },
                 scales: {
-                    y: {
-                        ticks: { color: textColor },
-                        grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
-                    },
-                    x: {
-                        ticks: { color: textColor },
-                        grid: { display: false }
-                    }
+                    y: { ticks: { color: textColor }, grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } },
+                    x: { ticks: { color: textColor }, grid: { display: false } }
                 }
             }
         });
-
         this.updateChart();
     },
 
     updateChart() {
         if (!this.chart) return;
-
         const filterEl = document.getElementById('chart-filter');
         if (!filterEl) return;
         const filter = filterEl.value;
         const sortedLogs = [...this.data.logs].reverse().slice(-7);
         const labels = sortedLogs.map(l => new Date(l.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }));
-
         let datasets = [];
         const isDark = document.body.classList.contains('dark-mode');
 
         if (filter === 'bp') {
             datasets = [
-                {
-                    label: 'Sistólica',
-                    data: sortedLogs.map(l => l.systolic),
-                    borderColor: '#4f46e5',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: 'Diastólica',
-                    data: sortedLogs.map(l => l.diastolic),
-                    borderColor: '#10b981',
-                    backgroundColor: 'transparent',
-                    tension: 0.4
-                }
+                { label: 'Sistólica', data: sortedLogs.map(l => l.systolic), borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', tension: 0.4, fill: true },
+                { label: 'Diastólica', data: sortedLogs.map(l => l.diastolic), borderColor: '#10b981', backgroundColor: 'transparent', tension: 0.4 }
             ];
         } else if (filter === 'glucose') {
-            datasets = [{
-                label: 'Glicemia (mg/dL)',
-                data: sortedLogs.map(l => l.glucose),
-                borderColor: '#ef4444',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                tension: 0.4,
-                fill: true
-            }];
+            datasets = [{ label: 'Glicemia', data: sortedLogs.map(l => l.glucose), borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, fill: true }];
         } else if (filter === 'weight') {
-            datasets = [{
-                label: 'Peso (kg)',
-                data: sortedLogs.map(l => l.weight),
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.4,
-                fill: true
-            }];
+            datasets = [{ label: 'Peso', data: sortedLogs.map(l => l.weight), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.4, fill: true }];
         }
 
         this.chart.data.labels = labels;
         this.chart.data.datasets = datasets;
-
         const textColor = isDark ? '#f1f5f9' : '#1e293b';
         if (this.chart.options.plugins.legend.labels) this.chart.options.plugins.legend.labels.color = textColor;
         if (this.chart.options.scales.x.ticks) this.chart.options.scales.x.ticks.color = textColor;
         if (this.chart.options.scales.y.ticks) this.chart.options.scales.y.ticks.color = textColor;
-
         this.chart.update();
     },
 
     showModal(id) {
         const modal = document.getElementById(id);
         if (modal) modal.classList.add('active');
-
-        if (id === 'log-modal') {
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            const logDateInput = document.getElementById('log-date');
-            if (logDateInput) logDateInput.value = now.toISOString().slice(0, 16);
-        }
     },
 
     hideModal(id) {
@@ -555,46 +581,15 @@ const app = {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         const viewEl = document.getElementById(viewId);
         if (viewEl) viewEl.classList.add('active');
-
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         const navEl = document.getElementById(`nav-${viewId}`);
         if (navEl) navEl.classList.add('active');
-
         if (viewId === 'dashboard') this.updateChart();
         if (viewId === 'history') this.renderHistory();
-
         window.scrollTo(0, 0);
     },
 
-    clearAllData() {
-        if (confirm('¿ESTÁS SEGURO? Esto eliminará todos tus registros LOCALES permanentemente.')) {
-            this.data.logs = [];
-            this.saveLogs();
-            this.renderDashboard();
-            this.renderHistory();
-            this.updateChart();
-            alert('Datos locales borrados.');
-        }
-    },
-
-    exportData() {
-        if (this.data.logs.length === 0) return alert('No hay datos para exportar.');
-
-        let csv = 'Fecha,Sistolica,Diastolica,Pulso,Glicemia,Peso\n';
-        this.data.logs.forEach(l => {
-            csv += `${l.date},${l.systolic},${l.diastolic},${l.pulse || ''},${l.glucose || ''},${l.weight || ''}\n`;
-        });
-
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.setAttribute('href', url);
-        a.setAttribute('download', `bienestar_datos_${new Date().toISOString().slice(0, 10)}.csv`);
-        a.click();
-    },
-
     initEventListeners() {
-        console.log('Initializing event listeners...');
         const themeBtn = document.getElementById('theme-toggle');
         if (themeBtn) themeBtn.addEventListener('click', () => this.toggleTheme());
 
@@ -617,9 +612,7 @@ const app = {
         }
 
         const authForm = document.getElementById('auth-form');
-        if (authForm) {
-            authForm.addEventListener('submit', (e) => this.handleAuth(e));
-        }
+        if (authForm) authForm.addEventListener('submit', (e) => this.handleAuth(e));
 
         const filter = document.getElementById('chart-filter');
         if (filter) filter.addEventListener('change', () => this.updateChart());
@@ -629,6 +622,7 @@ const app = {
             nameInput.addEventListener('change', (e) => {
                 this.data.settings.userName = e.target.value;
                 this.saveSettings();
+                this.renderHistory(); // Refresh user name in report
             });
         }
 
@@ -642,36 +636,19 @@ const app = {
 
         const saveConfigBtn = document.getElementById('save-supabase-config');
         if (saveConfigBtn) {
-            console.log('Attaching click listener to save button');
             saveConfigBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                e.stopPropagation();
                 this.saveSupabaseConfig();
             });
-        } else {
-            console.error('Save button NOT found during listener initialization');
         }
     }
 };
 
-window.addEventListener('scroll', () => {
-    const header = document.querySelector('.main-header');
-    if (header) {
-        if (window.scrollY > 10) {
-            header.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-        } else {
-            header.style.boxShadow = 'none';
-        }
-    }
-});
-
-// Expose app for debugging
 window.app = app;
 
 function startApp() {
     if (window.appStarted) return;
     window.appStarted = true;
-    console.log('Starting app (readyState check)...');
     app.init();
 }
 
