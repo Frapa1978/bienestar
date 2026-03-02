@@ -1,11 +1,13 @@
 // SVG icons are embedded in manifest, so no need to cache PNG files
-const CACHE_NAME = 'bienestar-v5';
+const CACHE_NAME = 'bienestar-v6';
 const ASSETS = [
     './',
     'index.html',
     'manifest.json',
     'style.css',
     'app.js',
+    './icon-192.png',
+    './icon-512.png',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap',
     'https://cdn.jsdelivr.net/npm/chart.js',
     'https://unpkg.com/lucide@latest'
