@@ -1,7 +1,9 @@
-const CACHE_NAME = 'bienestar-v2';
+// bump cache version to clear previous heart-icon entries
+const CACHE_NAME = 'bienestar-v3';
 const ASSETS = [
     './',
     'index.html',
+    'manifest.json',
     'style.css',
     'app.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap',
