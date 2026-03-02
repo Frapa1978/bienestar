@@ -187,23 +187,24 @@ const app = {
     },
 
     saveSupabaseConfig() {
-        const urlInput = document.getElementById('supabase-url');
-        const keyInput = document.getElementById('supabase-key');
+    const urlInput = document.getElementById('https://qcbrxhuktglawmggdyge.supabase.co');
+    const keyInput = document.getElementById('sb_publishable_Uq-ovU5whLrT4ll0o1C1JA_XRpyPX-4');
 
-        const url = urlInput.value.trim();
-        const key = keyInput.value.trim();
+    const url = urlInput.value.trim();
+    const key = keyInput.value.trim();
 
-        if (!url || !key) {
-            alert('Por favor, ingresa tanto la URL como la Anon Key.');
-            return;
-        }
+    if (!url || !key) {
+        alert('Por favor, ingresa tanto la URL como la Anon Key.');
+        return;
+    }
 
-        this.data.settings.supabaseUrl = url;
-        this.data.settings.supabaseKey = key;
+    this.data.settings.supabaseUrl = url;
+    this.data.settings.supabaseKey = key;
 
-        this.saveSettings();
-        this.initSupabase();
-        alert('Configuración guardada correctamente.');
+    this.saveSettings();
+    this.initSupabase();
+    alert('Configuración guardada correctamente.');
+}
     },
 
     updateSyncIndicator(status) {
