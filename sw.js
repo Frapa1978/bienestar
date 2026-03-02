@@ -1,5 +1,5 @@
 // SVG icons are embedded in manifest, so no need to cache PNG files
-const CACHE_NAME = 'bienestar-v4';
+const CACHE_NAME = 'bienestar-v5';
 const ASSETS = [
     './',
     'index.html',
