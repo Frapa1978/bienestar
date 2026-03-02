@@ -1,4 +1,3 @@
-// SVG icons are embedded in manifest, so no need to cache PNG files
 const CACHE_NAME = 'bienestar-v4';
 const ASSETS = [
     './',
@@ -12,20 +11,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-    console.log('[SW] installing');
-    // activate immediately
-    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS);
         })
     );
-});
-
-self.addEventListener('activate', (event) => {
-    console.log('[SW] activated');
-    // take control of uncontrolled clients
-    event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
