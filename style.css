@@ -192,6 +192,11 @@ h3,
     margin-bottom: 1.5rem;
 }
 
+/* install button in header */
+#install-btn {
+    margin-right: 0.5rem;
+}
+
 .btn-primary {
     width: 100%;
     padding: 1rem;

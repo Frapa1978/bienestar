@@ -19,10 +19,11 @@ const app = {
         },
         user: null,
         syncing: false,
-        authMode: 'login' // 'login' or 'signup'
+        authMode: 'login', // 'login' or 'signup'
     },
 
     supabase: null,
+    deferredPrompt: null, // for PWA install
 
     init() {
         console.log('app.init() starting...');
@@ -639,6 +640,19 @@ const app = {
             saveConfigBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.saveSupabaseConfig();
+            });
+        }
+
+        // handle install button click
+        const installBtn = document.getElementById('install-btn');
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!this.deferredPrompt) return;
+                this.deferredPrompt.prompt();
+                const choice = await this.deferredPrompt.userChoice;
+                // hide button after prompt
+                installBtn.style.display = 'none';
+                this.deferredPrompt = null;
             });
         }
     }
