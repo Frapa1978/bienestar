@@ -47,6 +47,13 @@ const app = {
         const logDateInput = document.getElementById('log-date');
         if (logDateInput) logDateInput.value = now.toISOString().slice(0, 16);
 
+        // Show auth modal on first launch if not authenticated
+        if (!this.data.user && !localStorage.getItem('bienestar_auth_prompted')) {
+            setTimeout(() => {
+                this.showModal('auth-modal');
+            }, 500);
+        }
+
         console.log('Bienestar fully initialized');
     },
 
@@ -162,6 +169,8 @@ const app = {
 
             if (result.error) throw result.error;
 
+            // Mark that user has been authenticated
+            localStorage.setItem('bienestar_auth_prompted', 'true');
             this.hideModal('auth-modal');
             if (msg) msg.textContent = '';
         } catch (error) {
@@ -173,6 +182,8 @@ const app = {
         if (this.supabase) {
             await this.supabase.auth.signOut();
         }
+        // Clear auth prompt flag so it asks again on next launch
+        localStorage.removeItem('bienestar_auth_prompted');
     },
 
     saveSupabaseConfig() {
@@ -614,14 +625,22 @@ const app = {
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
+                // Build formData with only filled fields
                 const formData = {
                     date: document.getElementById('log-date').value,
                     systolic: parseInt(document.getElementById('systolic').value),
-                    diastolic: parseInt(document.getElementById('diastolic').value),
-                    pulse: parseInt(document.getElementById('pulse').value) || null,
-                    glucose: parseInt(document.getElementById('glucose').value) || null,
-                    weight: parseFloat(document.getElementById('weight').value) || null
+                    diastolic: parseInt(document.getElementById('diastolic').value)
                 };
+                // Add optional fields only if they have values
+                const pulseVal = parseInt(document.getElementById('pulse').value);
+                if (!isNaN(pulseVal)) formData.pulse = pulseVal;
+                
+                const glucoseVal = parseInt(document.getElementById('glucose').value);
+                if (!isNaN(glucoseVal)) formData.glucose = glucoseVal;
+                
+                const weightVal = parseFloat(document.getElementById('weight').value);
+                if (!isNaN(weightVal)) formData.weight = weightVal;
+                
                 this.addLog(formData);
                 this.hideModal('log-modal');
                 form.reset();
